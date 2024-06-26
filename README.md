@@ -1,2 +1,2 @@
-# ETL-environment-app
-Streamlit app to show statistics on Earth and Space
+# ETL-environmental-data-app
+Streamlit app to show climate statistics on Earth and Space
