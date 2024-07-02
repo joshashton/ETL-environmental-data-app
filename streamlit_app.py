@@ -37,7 +37,7 @@ conn = init_connection()
 
 @st.cache_data(ttl=get_ttl(), show_spinner = "Creating Data...")
 def query_db(query):
-    st.write("query_db")
+    #st.write("query_db")
     result = conn.query(query)
     return result
 
@@ -111,7 +111,8 @@ with tab1:
 
     #earthquake plot 
     st.subheader(f"Earthquake Data")
-    query = f"SELECT * FROM student.de10_ja_earthquake where DATE(time) = '{max_earthquake_date}';"
+    #query = f"SELECT * FROM student.de10_ja_earthquake where DATE(time) = '{max_earthquake_date}';"
+    query = f"SELECT * FROM student.de10_ja_earthquake order by time limit 50;"
     earthquake_data = query_db(query)
     st.write(earthquake_data)
 
@@ -129,8 +130,8 @@ with tab1:
 
     #natural disaster plot
     st.subheader(f"Natural Disaster Data")
-    query = f"SELECT * FROM student.de10_ja_natural_disasters where DATE(time) = '{max_disaster_date}';"
-    #query = f"SELECT * FROM student.de10_ja_natural_disasters;"
+    #query = f"SELECT * FROM student.de10_ja_natural_disasters where DATE(time) = '{max_disaster_date}';"
+    query = f"SELECT * FROM student.de10_ja_natural_disasters order by time limit 50;"
     disasters_data = query_db(query)
     st.write(disasters_data)
 
