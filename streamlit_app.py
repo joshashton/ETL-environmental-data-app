@@ -11,8 +11,21 @@ import requests
 from pprint import pprint
 
 
+st.write(st.secrets["api_key"])
+
+# Initialize connection.
+conn = st.connection("postgresql",type="sql")
+# Perform query.
+df = conn.query('SELECT MAX(date) FROM student.de10_ja_apod;', ttl="10m")
+
+
+
+
 st.title("Environmental Information Hub")
 st.header("Climate Stats")
+
+
+
 st.subheader("Weather")
 city = st.text_input("Enter city name:")
 col1, col2, col3 = st.columns(3)
