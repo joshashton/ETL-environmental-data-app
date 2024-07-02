@@ -20,6 +20,7 @@ today_date = datetime.today().strftime('%Y-%m-%d')
 
 def get_ttl():
     # Calculate the ttl until 3 AM the next day for CRON job
+    #make sure this is utc 
     now = datetime.now()
     next_day = now + timedelta(days=1)
     next_3am = next_day.replace(hour=3, minute=0, second=0, microsecond=0)
@@ -87,6 +88,18 @@ with tab1:
     if weather_options:
         st.metric("Temperature", "26 C", "4 C from last year")
 
+    #weather plot
+
+
+
+
+
+    #earthquake plot 
+
+
+
+    #natural disaster plot
+
 
 
 #Space section
@@ -94,7 +107,7 @@ with tab2:
     st.header("Space Stats")
     query = f"SELECT * FROM student.de10_ja_apod ORDER BY date DESC LIMIT 1;"
     apod_data = conn.query(query, ttl=get_ttl())
-    st.write(apod_data)
+    #st.write(apod_data)
     name, explanation, date, url = apod_data.iloc[0]
     st.subheader(f"Astronomy Picture of the Day (APOD)")
     st.image(url, caption=f'{name} ({date})', use_column_width=True)
@@ -103,16 +116,16 @@ with tab2:
     st.subheader(f"Near Earth Objects (NEO)")
     query = f"SELECT * FROM student.de10_ja_neo where DATE(date) = '{max_neo_date}';"
     neo_data = conn.query(query, ttl=get_ttl())
-    st.write(neo_data)
+    #st.write(neo_data)
 
 
-    #NEO Plot
-     # Define a function to adjust marker size based on diameter
+    #NEO 3d Plot
+    # Define a function to adjust astroid size based on diameter
     def adjust_marker_size(diameter):
         if diameter > 0.099:
-            return diameter * 50  # Adjust multiplier for larger diameters
+            return diameter * 40  
         else:
-            return diameter * 200  # Adjust multiplier for smaller diameters
+            return diameter * 200  
     # Earth position
     earth_x, earth_y, earth_z = 0, 0, 0
 
@@ -125,7 +138,7 @@ with tab2:
     ys = np.array(neo_data['miss_miles']) * np.sin(theta) * np.sin(phi)
     zs = np.array(neo_data['miss_miles']) * np.cos(phi)
 
-    # Create a DataFrame
+    # Create new NEO DataFrame
     neo_3d_df = pd.DataFrame({
         'x': xs,
         'y': ys,
@@ -172,7 +185,7 @@ with tab2:
                             f"Miss Distance: {row['miss_miles']} miles<br>"
                             f"Diameter: {row['diameter']} miles",
                             axis=1),
-        showlegend=True  # Ensure non-hazardous asteroids show in the legend
+        showlegend=True  
     ))
 
     # Plot hazardous asteroids around Earth
@@ -194,7 +207,7 @@ with tab2:
                             f"Miss Distance: {row['miss_miles']} miles<br>"
                             f"Diameter: {row['diameter']} miles",
                             axis=1),
-        showlegend=True  # Ensure hazardous asteroids show in the legend
+        showlegend=True 
     ))
 
     # Set axis limits based on the maximum distance
