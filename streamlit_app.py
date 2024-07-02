@@ -101,6 +101,18 @@ with tab1:
     earthquake_data = conn.query(query, ttl=get_ttl())
     st.write(earthquake_data)
 
+    #map plot of daily quakes
+    earthquake_fig = go.Figure(data=go.Scattergeo(
+        lon = earthquake_data['longitude'],
+        lat = earthquake_data['latitude'],
+        text = earthquake_data['place']+earthquake_data['mag']+earthquake_data['magtype'],
+        mode = 'lines',
+        marker_color = earthquake_data['mag'],
+        ))
+    
+    st.plotly_chart(earthquake_fig)
+
+
     #natural disaster plot
     st.subheader(f"Natural Disaster Data")
     query = f"SELECT * FROM student.de10_ja_natural_disasters where DATE(time) = '{max_disaster_date}';"
@@ -233,5 +245,5 @@ with tab2:
         scene_camera=dict(eye=dict(x=1.5, y=1.5, z=1.0), center=dict(x=0, y=0, z=-0.2))
     )
 
-    st.plotly_chart(fig, theme="streamlit")
+    st.plotly_chart(fig)
 
