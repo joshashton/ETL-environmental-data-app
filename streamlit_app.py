@@ -29,7 +29,18 @@ def get_ttl():
 
 #DB connection
 # Initialize connection.
-conn = st.connection("postgresql",type="sql")
+@st.cache_resource(ttl=get_ttl())
+def init_connection():
+    return st.connection("postgresql",type="sql")
+
+conn = init_connection()
+
+@st.cache_data(ttl=get_ttl(), show_spinner = "Creating Data...")
+def query_db(query):
+    return conn.query(query)
+
+
+
 # Get latest dates from DB for all data sources
 query = '''
     SELECT 
@@ -39,7 +50,8 @@ query = '''
         (SELECT MAX(date) FROM student.de10_ja_neo) AS max_neo_date,
         (SELECT MAX(date) FROM student.de10_ja_apod) AS max_apod_date
 '''
-dates = conn.query(query, ttl=get_ttl())
+
+dates = query_db(query)
 
 # Convert to datetime objects
 max_weather_date = datetime.strptime(dates['max_weather_date'][0], '%Y-%m-%d').strftime('%Y-%m-%d')
@@ -91,22 +103,22 @@ with tab1:
     #weather plot
     
     query = f"SELECT * FROM student.de10_ja_weather where DATE(date) = '{max_weather_date}';"
-    weather_data = conn.query(query, ttl=get_ttl())
+    weather_data = conn.query(query)
     st.write(weather_data)
 
 
     #earthquake plot 
     st.subheader(f"Earthquake Data")
     query = f"SELECT * FROM student.de10_ja_earthquake where DATE(time) = '{max_earthquake_date}';"
-    earthquake_data = conn.query(query, ttl=get_ttl())
+    earthquake_data = conn.query(query)
     st.write(earthquake_data)
 
     #map plot of daily quakes
     earthquake_fig = go.Figure(data=go.Scattergeo(
         lon = earthquake_data['longitude'],
         lat = earthquake_data['latitude'],
-        text = earthquake_data['place']+earthquake_data['mag']+earthquake_data['magtype'],
-        mode = 'lines',
+        text = earthquake_data['place'],
+        mode = 'markers',
         marker_color = earthquake_data['mag'],
         ))
     
@@ -116,7 +128,7 @@ with tab1:
     #natural disaster plot
     st.subheader(f"Natural Disaster Data")
     query = f"SELECT * FROM student.de10_ja_natural_disasters where DATE(time) = '{max_disaster_date}';"
-    disasters_data = conn.query(query, ttl=get_ttl())
+    disasters_data = conn.query(query)
     st.write(disasters_data)
 
 
@@ -124,7 +136,7 @@ with tab1:
 with tab2:
     st.header("Space Stats")
     query = f"SELECT * FROM student.de10_ja_apod ORDER BY date DESC LIMIT 1;"
-    apod_data = conn.query(query, ttl=get_ttl())
+    apod_data = conn.query(query)
     #st.write(apod_data)
     name, explanation, date, url = apod_data.iloc[0]
     st.subheader(f"Astronomy Picture of the Day (APOD)")
@@ -133,7 +145,7 @@ with tab2:
 
     st.subheader(f"Near Earth Objects (NEO)")
     query = f"SELECT * FROM student.de10_ja_neo where DATE(date) = '{max_neo_date}';"
-    neo_data = conn.query(query, ttl=get_ttl())
+    neo_data = conn.query(query)
     #st.write(neo_data)
 
 
