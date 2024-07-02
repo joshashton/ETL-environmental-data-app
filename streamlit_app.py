@@ -102,6 +102,7 @@ with tab1:
 
 
 
+
 #Space section
 with tab2:
     st.header("Space Stats")
@@ -179,7 +180,7 @@ with tab2:
         ),
         name='Non-Hazardous Asteroids',
         hoverinfo='text',
-        text=neo_3d_df.apply(lambda row:
+        text=neo_3d_df[neo_3d_df['is_hazardous'] == False].apply(lambda row:
                             f"Name: {row['name']}<br>"
                             f"NEO ID: {row['neo_id']}<br>"
                             f"Miss Distance: {row['miss_miles']} miles<br>"
@@ -195,13 +196,13 @@ with tab2:
         z=neo_3d_df[neo_3d_df['is_hazardous'] == True]['z'],
         mode='markers',
         marker=dict(
-            size=neo_3d_df['diameter'].apply(adjust_marker_size),  # Scale diameter for visibility
+            size=neo_3d_df.loc[neo_3d_df['is_hazardous'] == True, 'diameter'].apply(adjust_marker_size),  # Scale diameter for visibility
             color='red',  # Color for hazardous asteroids
             opacity=0.7
         ),
         name='Hazardous Asteroids',
         hoverinfo='text',
-        text=neo_3d_df.apply(lambda row:
+        text=neo_3d_df[neo_3d_df['is_hazardous'] == True].apply(lambda row:
                             f"Name: {row['name']}<br>"
                             f"NEO ID: {row['neo_id']}<br>"
                             f"Miss Distance: {row['miss_miles']} miles<br>"
