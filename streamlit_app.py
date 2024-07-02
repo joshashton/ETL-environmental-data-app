@@ -89,18 +89,23 @@ with tab1:
         st.metric("Temperature", "26 C", "4 C from last year")
 
     #weather plot
-
-
-
+    
+    query = f"SELECT * FROM student.de10_ja_weather where DATE(date) = '{max_weather_date}';"
+    weather_data = conn.query(query, ttl=get_ttl())
+    st.write(weather_data)
 
 
     #earthquake plot 
-
-
+    st.subheader(f"Earthquake Data")
+    query = f"SELECT * FROM student.de10_ja_earthquake where DATE(time) = '{max_earthquake_date}';"
+    earthquake_data = conn.query(query, ttl=get_ttl())
+    st.write(earthquake_data)
 
     #natural disaster plot
-
-
+    st.subheader(f"Natural Disaster Data")
+    query = f"SELECT * FROM student.de10_ja_natural_disasters where DATE(time) = '{max_disaster_date}';"
+    disasters_data = conn.query(query, ttl=get_ttl())
+    st.write(disasters_data)
 
 
 #Space section
@@ -215,16 +220,18 @@ with tab2:
     max_distance = 1.2 * max(neo_data['miss_miles'])
     fig.update_layout(
         scene=dict(
-            xaxis=dict(range=[-max_distance, max_distance]),
-            yaxis=dict(range=[-max_distance, max_distance]),
-            zaxis=dict(range=[-max_distance, max_distance])
+            xaxis=dict(title='Distance from Earth (miles)', range=[-max_distance, max_distance]),
+            yaxis=dict(title='Distance from Earth (miles)',range=[-max_distance, max_distance]),
+            zaxis=dict(title='Distance from Earth (miles)',range=[-max_distance, max_distance])
         ),
         title=f"3D Plot of Asteroids around Earth on {max_neo_date}",
         scene_aspectmode='cube', # Ensure the aspect ratio is equal
+        autosize= True, 
+        height = 500, 
+        margin = dict(t = 50, b =30), 
+        legend = dict(itemsizing = "constant"),
+        scene_camera=dict(eye=dict(x=1.5, y=1.5, z=1.0), center=dict(x=0, y=0, z=-0.2))
     )
 
-    # Display the plot
-    #fig.show()
-    fig.update_layout(autosize= True, height = 600, margin = dict(t = 50, b =100), legend = dict(itemsizing = "constant"))
     st.plotly_chart(fig, theme="streamlit")
 
