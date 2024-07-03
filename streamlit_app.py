@@ -96,9 +96,9 @@ with tab1:
     st.subheader("Historical Weather Analysis ")
 
     weather_options = st.multiselect(
-        "Countries to analyse:", 
+        "Places to analyse (data from capital cities):", 
         countries_df['country'],
-        ['United Kingdom'], max_selections = 5)
+        ['United Kingdom', 'Spain', 'Mexico'], max_selections = 5)
     
     today_date_datetime = datetime.strptime(today_date, '%Y-%m-%d')
     date_20_years_ago = date(today_date_datetime.year - 0 , 6, 1)
@@ -114,31 +114,36 @@ with tab1:
     button_press = st.button("Analyse", type="primary")
     if button_press:
         #st.metric("Temperature", "26 C", "4 C from last year")
-        country_ids = countries_df.loc[countries_df.country == weather_options[0], 'country_id'].tolist()
-
+        # Loop through each weather option selected
+        country_ids = []
+        for weather_option in weather_options:
+            # Find corresponding country_id for the selected weather_option
+            ids = countries_df.loc[countries_df['country'] == weather_option, 'country_id'].tolist()
+            country_ids.extend(ids)
         
-        all_weather_data = []  # List to hold all weather data
+        all_weather_data = pd.DataFrame()  # List to hold all weather data
 
+        #get sql data for selected countries
         for country_id in country_ids:
-            query = f"""SELECT * FROM student.de10_ja_weather WHERE country_id = {country_id} AND DATE(date) BETWEEN '{date_range[0]}' AND '{date_range[1]}';"""
+            query = f"""SELECT * FROM student.de10_ja_weather WHERE country_id = {country_id} AND DATE(date) BETWEEN '{date_range[0]}' AND '{date_range[1]}'ORDER BY date ASC;"""
             weather_data = query_db(query)
-            all_weather_data.append(weather_data)  # Extend list with query results
-       
-        weather_data_df = pd.concat(all_weather_data, ignore_index=True)
-        st.write(weather_data_df)
+            all_weather_data = pd.concat([weather_data,all_weather_data], ignore_index=True)
+
+        all_weather_data = all_weather_data.merge(countries_df[['country_id', 'country']], on='country_id', how='left')
 
         #weather plot
-        fig_temp = px.line(weather_data_df, x='date', y='avg_temp_c', title='Average Temperature Over Time')
+        fig_temp = px.line(all_weather_data, x='date', y='avg_temp_c', title='Average Temperature Over Time', color='country')
         fig_temp.update_layout(xaxis_title='Date', yaxis_title='Average Temperature (°C)')
         st.plotly_chart(fig_temp)
 
-        fig_precipitation = px.bar(weather_data_df, x='date', y='precipitation_mm', title='Daily Precipitation Over Time')
+        fig_precipitation = px.bar(all_weather_data, x='date', y='precipitation_mm', title='Daily Precipitation Over Time', color='country')
         fig_precipitation.update_layout(xaxis_title='Date', yaxis_title='Precipitation (mm)')
         st.plotly_chart(fig_precipitation)
 
-        fig_wind = px.line(weather_data_df, x='date', y='avg_wind_speed_kmh', title='Average Wind Speed Over Time')
+        fig_wind = px.line(all_weather_data, x='date', y='avg_wind_speed_kmh', title='Average Wind Speed Over Time', color='country')
         fig_wind.update_layout(xaxis_title='Date', yaxis_title='Average Wind Speed (km/h)')
         st.plotly_chart(fig_wind)
+
 
 
     #earthquake plot 
@@ -146,7 +151,7 @@ with tab1:
     #query = f"SELECT * FROM student.de10_ja_earthquake where DATE(time) = '{max_earthquake_date}';"
     query = f"SELECT * FROM student.de10_ja_earthquake order by time limit 50;"
     earthquake_data = query_db(query)
-    st.write(earthquake_data)
+    #st.write(earthquake_data)
 
     #map plot of daily quakes
     earthquake_fig = go.Figure(data=go.Scattergeo(
@@ -160,12 +165,13 @@ with tab1:
     st.plotly_chart(earthquake_fig)
 
 
+
     #natural disaster plot
     st.subheader(f"Natural Disaster Data")
     #query = f"SELECT * FROM student.de10_ja_natural_disasters where DATE(time) = '{max_disaster_date}';"
     query = f"SELECT * FROM student.de10_ja_natural_disasters order by time limit 50;"
     disasters_data = query_db(query)
-    st.write(disasters_data)
+    #st.write(disasters_data)
 
     #map plot of daily quakes
     disasters_fig = go.Figure(data=go.Scattergeo(
@@ -182,7 +188,7 @@ with tab1:
 #Space section
 with tab2:
     st.header("Space Stats")
-    query = f"SELECT * FROM student.de10_ja_apod ORDER BY date DESC LIMIT 1;"
+    query = f"SELECT * FROM student.de10_ja_apod where DATE(date) = '{max_apod_date}';"
     apod_data = query_db(query)
     #st.write(apod_data)
     name, explanation, date, url = apod_data.iloc[0]
