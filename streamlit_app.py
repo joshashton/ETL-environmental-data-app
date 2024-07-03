@@ -74,22 +74,7 @@ tab1, tab2 = st.tabs(["🌍 Earth", "🚀 Space"])
 
 #Earth section
 with tab1:
-    st.header("Climate Stats")
-
-
-    st.subheader("Weather")
-    city = st.text_input("Enter city name:")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if city:
-            st.metric("Temperature", "70 °F", "1.2 °F")
-    with col2:
-        if city:
-            st.metric("Wind", "9 mph", "-8%")        
-    with col3:
-        if city:
-            st.metric("Humidity", "86%", "4%")
-
+    st.header("Earth Stats")
     # Forecast of chosen weather
 
     # weather - this time last year
@@ -101,39 +86,73 @@ with tab1:
         countries_df['country'],
         ['United Kingdom', 'Spain', 'Mexico'], max_selections = 5)
     
+    
+    if weather_options:
+
+        #get chosen countries ids and names in df
+        country_ids = []
+        for weather_option in weather_options:
+            # Find corresponding country_id for the selected weather_option
+            ids = countries_df.loc[countries_df['country'] == weather_option, 'country_id'].tolist()
+            country_ids.extend(ids)
+
+        avg_monthly_temp = pd.DataFrame()
+        for i in country_ids:
+
+            query = f"""SELECT country_id, AVG(avg_temp_c) 
+            FROM student.de10_ja_weather 
+            WHERE country_id = {i} 
+            AND EXTRACT(MONTH FROM date::Date) = EXTRACT(MONTH FROM '{today_date}'::Date) 
+            AND EXTRACT(YEAR FROM date::Date) = EXTRACT(YEAR FROM '{today_date}'::Date)
+            GROUP BY country_id;"""
+            weather_data = query_db(query)
+            avg_monthly_temp = pd.concat([weather_data,avg_monthly_temp], ignore_index=True)
+
+        avg_monthly_temp = avg_monthly_temp.merge(countries_df[['country_id', 'country']], on='country_id', how='left')
+        
+        st.caption(":blue[Current Monthly Average Temperature]")
+        
+        col1, col2, col3 = st.columns(3)
+        columns = [col1, col2, col3]
+
+        # Display a separate metric for each country
+        for index, row in avg_monthly_temp.iterrows():
+            country_name = row['country']
+            avg_temp = row['avg']
+            column = columns[index % 3]  # Cycle through columns
+            with column:
+                st.metric(f"{country_name}", f"{avg_temp:.2f} °C")
+
+        #st.divider()
+        #st.write(avg_monthly_temp)
+
     today_date_datetime = datetime.strptime(today_date, '%Y-%m-%d')
-    date_20_years_ago = date(today_date_datetime.year - 0 , 6, 1)
+    date_20_years_ago = date(today_date_datetime.year - 0 , 1, 1)
 
     date_range = st.date_input(
-        "Select the years to analyse",
+        "Select date range to analyse",
         (date_20_years_ago, datetime.strptime(max_weather_date, '%Y-%m-%d')),
         datetime.strptime(min_weather_date, '%Y-%m-%d'),
         datetime.strptime(max_weather_date, '%Y-%m-%d'),
         format="YYYY/MM/DD",
     )    
 
+    
     button_press = st.button("Analyse", type="primary")
     if button_press:
         #st.metric("Temperature", "26 C", "4 C from last year")
         # Loop through each weather option selected
-        country_ids = []
-        for weather_option in weather_options:
-            # Find corresponding country_id for the selected weather_option
-            ids = countries_df.loc[countries_df['country'] == weather_option, 'country_id'].tolist()
-            country_ids.extend(ids)
         
-        all_weather_data = pd.DataFrame()  # List to hold all weather data
+        
+        all_weather_data = pd.DataFrame() 
 
         #get sql data for selected countries
         for country_id in country_ids:
-            query = f"""SELECT * FROM student.de10_ja_weather WHERE country_id = {country_id} AND DATE(date) BETWEEN '{date_range[0]}' AND '{date_range[1]}'ORDER BY date ASC;"""
+            query = f"""SELECT * FROM student.de10_ja_weather WHERE country_id = {country_id} AND DATE(date) BETWEEN '{date_range[0]}' AND '{date_range[1]}' ORDER BY date ASC;"""
             weather_data = query_db(query)
             all_weather_data = pd.concat([weather_data,all_weather_data], ignore_index=True)
 
         all_weather_data = all_weather_data.merge(countries_df[['country_id', 'country']], on='country_id', how='left')
-
-        #plot metrics
-        #st.metric("Temperature", "26 C", "4 C from last year")
 
         #weather plots
         fig_temp = px.line(all_weather_data, x='date', y='avg_temp_c', title='Average Temperature Over Time', color='country')
@@ -153,7 +172,7 @@ with tab1:
     #earthquake plot 
     st.subheader(f"Earthquake Data")
     #query = f"SELECT * FROM student.de10_ja_earthquake where DATE(time) = '{max_earthquake_date}';"
-    query = f"SELECT * FROM student.de10_ja_earthquake order by time desc limit 2;"
+    query = f"SELECT * FROM student.de10_ja_earthquake order by time desc limit 10;"
     earthquake_data = query_db(query)
     #st.write(earthquake_data)
 
@@ -177,11 +196,22 @@ with tab1:
             color = earthquake_data['mag'],
             cmax = earthquake_data['mag'].max(),
             colorbar_title="Magnitude"
-        )
-        #marker_color = earthquake_data['mag']
+        ),
+        hovertemplate=(
+                '<b>%{text}</b><br>' +
+                'Date: %{customdata[0]}<br>' +
+                'Magnitude: %{customdata[1]}<br>' +
+                'Mag Type: %{customdata[2]}<br>' +
+                'Lat: %{lat}<br>' +
+                'Lon: %{lon}<br>' +
+                '<extra></extra>'
+            ),
+        customdata=earthquake_data[['time', 'mag', 'magtype']]
         ))
+    
+    minEarthquakeDate = earthquake_data['time'].min()[:10]
     earthquake_fig.update_layout(
-        title = f'Latest Earthquakes ({max_earthquake_date})',
+        title = f'Last 10 Earthquakes ({minEarthquakeDate} - {max_earthquake_date})',
         width=1000,  # Set the width of the figure
     )
     st.plotly_chart(earthquake_fig)
