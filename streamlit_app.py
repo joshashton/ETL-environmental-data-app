@@ -132,6 +132,9 @@ with tab1:
 
         all_weather_data = all_weather_data.merge(countries_df[['country_id', 'country']], on='country_id', how='left')
 
+        #plot metrics
+        #st.metric("Temperature", "26 C", "4 C from last year")
+
         #weather plots
         fig_temp = px.line(all_weather_data, x='date', y='avg_temp_c', title='Average Temperature Over Time', color='country')
         fig_temp.update_layout(xaxis_title='Date', yaxis_title='Average Temperature (°C)')
@@ -160,40 +163,103 @@ with tab1:
         lat = earthquake_data['latitude'],
         text = earthquake_data['place'],
         mode = 'markers',
-        #marker_color = earthquake_data['mag'],
-        color = earthquake_data['mag']
-        #title="Earthquakes on {max_earthquake_date}"
+        marker = dict(
+            size = 8,
+            #opacity = 0.8,
+            #reversescale = True,
+            autocolorscale = False,
+            line = dict(
+                width=1,
+                color='rgba(102, 102, 102)'
+            ),
+            colorscale = 'Reds',
+            cmin = 5,
+            color = earthquake_data['mag'],
+            cmax = earthquake_data['mag'].max(),
+            colorbar_title="Magnitude"
+        )
+        #marker_color = earthquake_data['mag']
         ))
-    
+    earthquake_fig.update_layout(
+        title = f'Latest Earthquakes ({max_earthquake_date})',
+        width=1000,  # Set the width of the figure
+    )
     st.plotly_chart(earthquake_fig)
-
 
 
     #natural disaster plot
     st.subheader(f"Natural Disaster Data")
     #query = f"SELECT * FROM student.de10_ja_natural_disasters where DATE(time) = '{max_disaster_date}';"
-    query = f"SELECT * FROM student.de10_ja_natural_disasters order by time desc limit 2;"
+    query = f"SELECT * FROM student.de10_ja_natural_disasters order by time desc limit 10;"
     disasters_data = query_db(query)
-    #st.write(disasters_data)
-
+   
     #map plot of daily quakes
-    disasters_fig = go.Figure(data=go.Scattergeo(
-        lon = disasters_data['longitude'],
-        lat = disasters_data['latitude'],
-        text = disasters_data['name'],
-        mode = 'markers',
-        #color = disasters_data['mag']
-        #title="Natural Disasters on {max_disaster_date}"
-        ))
+    # Define custom colors for each disaster type
+    disaster_colors = {
+        'Wildfires': 'yellow',
+        'Severe Storms': 'green',
+        'Volcanoes': 'red',
+        'Sea and Lake Ice': 'blue'
+    }
+
+    # Add a 'color' column to the dataframe based on the disaster type
+    disasters_data['color'] = disasters_data['type'].map(disaster_colors)
+    # Initialize the figure
+    disasters_fig = go.Figure()
     
+    # Add a scatter trace for each disaster type
+    for disaster_type, color in disaster_colors.items():
+        filtered_data = disasters_data[disasters_data['type'] == disaster_type]
+        disasters_fig.add_trace(go.Scattergeo(
+            lon=filtered_data['longitude'],
+            lat=filtered_data['latitude'],
+            text=filtered_data['name'],
+            mode='markers',
+            marker=dict(
+                size=8,
+                color=color,  # Use the consistent color for this disaster type
+                line=dict(
+                    width=1,
+                    color='rgba(102, 102, 102)'
+                )
+            ),
+            name=disaster_type,  # This will appear in the legend
+            hovertemplate=(
+                '<b>%{text}</b><br>' +
+                'Date: %{customdata[0]}<br>' +
+                'Type: %{customdata[1]}<br>' +
+                'Lat: %{lat}<br>' +
+                'Lon: %{lon}<br>' +
+                '<extra></extra>'
+            ),
+            customdata=filtered_data[['time', 'type']]
+            
+        ))
+
+    minDisasterDtae = disasters_data['time'].min()[:10]
+    disasters_fig.update_layout(
+        title = f'Last 10 Natural Disasters ({minDisasterDtae} - {max_disaster_date})',
+        #geo_scope='world',
+        legend=dict(
+        title="Disaster Types",
+        itemsizing='constant',
+        traceorder='normal',
+        ),
+        width=1000,  # Set the width of the figure
+        
+    )
+
     st.plotly_chart(disasters_fig)
     
+
+
 
 
 #Space section
 with tab2:
     st.header("Space Stats")
-    query = f"SELECT * FROM student.de10_ja_apod where DATE(date) = '{max_apod_date}';"
+    query = f"SELECT * FROM student.de10_ja_apod order by date desc limit 1;" 
+    #query = f"SELECT * FROM student.de10_ja_apod where DATE(date) = '{max_apod_date}';"
     apod_data = query_db(query)
     #st.write(apod_data)
     name, explanation, date, url = apod_data.iloc[0]
