@@ -36,7 +36,7 @@ def init_connection():
 
 conn = init_connection()
 
-@st.cache_data(ttl=get_ttl(), show_spinner = "Creating Data...")
+@st.cache_data(ttl=get_ttl())
 def query_db(query):
     #st.write("query_db")
     result = conn.query(query)
@@ -75,11 +75,18 @@ tab1, tab2 = st.tabs(["🌍 Earth", "🚀 Space"])
 #Earth section
 with tab1:
     st.header("Earth Stats")
-    # Forecast of chosen weather
 
-    # weather - this time last year
-    # Analyse a Handfull of major cites 
-    st.subheader("Historical Weather Analysis ")
+    #To-Do
+    # weather - this time last year comparison stat
+    # weather - precipitation and wind stat - add to dataframe - find a way to get all countries in df
+    # update countries csv in github
+    # Make date picker responsive to countries ranges
+    # Make it wide st.set_page_config(page_title="Ex-stream-ly Cool App",page_icon="🧊", layout="wide")
+    # make date ranges neater on weather graphs
+    # add buttons to maps 1 days - 1 week - 1 month - 1 year
+
+    
+    st.subheader("Historical Weather Analysis")
 
     weather_options = st.multiselect(
         "Places to analyse (data from capital cities):", 
@@ -88,7 +95,6 @@ with tab1:
     
     
     if weather_options:
-
         #get chosen countries ids and names in df
         country_ids = []
         for weather_option in weather_options:
@@ -98,7 +104,6 @@ with tab1:
 
         avg_monthly_temp = pd.DataFrame()
         for i in country_ids:
-
             query = f"""SELECT country_id, AVG(avg_temp_c) 
             FROM student.de10_ja_weather 
             WHERE country_id = {i} 
@@ -123,8 +128,6 @@ with tab1:
             with column:
                 st.metric(f"{country_name}", f"{avg_temp:.2f} °C")
 
-        #st.divider()
-        #st.write(avg_monthly_temp)
 
     today_date_datetime = datetime.strptime(today_date, '%Y-%m-%d')
     date_20_years_ago = date(today_date_datetime.year - 0 , 1, 1)
@@ -137,7 +140,6 @@ with tab1:
         format="YYYY/MM/DD",
     )    
 
-    
     button_press = st.button("Analyse", type="primary")
     if button_press:
         #st.metric("Temperature", "26 C", "4 C from last year")
