@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt # visualisation!
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.figure_factory as ff
 
 #database connection
 import psycopg2 as psql 
@@ -131,7 +132,7 @@ with tab1:
 
         all_weather_data = all_weather_data.merge(countries_df[['country_id', 'country']], on='country_id', how='left')
 
-        #weather plot
+        #weather plots
         fig_temp = px.line(all_weather_data, x='date', y='avg_temp_c', title='Average Temperature Over Time', color='country')
         fig_temp.update_layout(xaxis_title='Date', yaxis_title='Average Temperature (°C)')
         st.plotly_chart(fig_temp)
@@ -159,8 +160,9 @@ with tab1:
         lat = earthquake_data['latitude'],
         text = earthquake_data['place'],
         mode = 'markers',
-        marker_color = earthquake_data['mag'],
-        title="Earthquakes on {max_earthquake_date}"
+        #marker_color = earthquake_data['mag'],
+        color = earthquake_data['mag']
+        #title="Earthquakes on {max_earthquake_date}"
         ))
     
     st.plotly_chart(earthquake_fig)
@@ -180,7 +182,8 @@ with tab1:
         lat = disasters_data['latitude'],
         text = disasters_data['name'],
         mode = 'markers',
-        title="Natural Disasters on {max_disaster_date}"
+        #color = disasters_data['mag']
+        #title="Natural Disasters on {max_disaster_date}"
         ))
     
     st.plotly_chart(disasters_fig)
