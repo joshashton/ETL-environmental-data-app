@@ -149,7 +149,7 @@ with tab1:
     #earthquake plot 
     st.subheader(f"Earthquake Data")
     #query = f"SELECT * FROM student.de10_ja_earthquake where DATE(time) = '{max_earthquake_date}';"
-    query = f"SELECT * FROM student.de10_ja_earthquake order by time limit 50;"
+    query = f"SELECT * FROM student.de10_ja_earthquake order by time desc limit 2;"
     earthquake_data = query_db(query)
     #st.write(earthquake_data)
 
@@ -160,6 +160,7 @@ with tab1:
         text = earthquake_data['place'],
         mode = 'markers',
         marker_color = earthquake_data['mag'],
+        title="Earthquakes on {max_earthquake_date}"
         ))
     
     st.plotly_chart(earthquake_fig)
@@ -169,7 +170,7 @@ with tab1:
     #natural disaster plot
     st.subheader(f"Natural Disaster Data")
     #query = f"SELECT * FROM student.de10_ja_natural_disasters where DATE(time) = '{max_disaster_date}';"
-    query = f"SELECT * FROM student.de10_ja_natural_disasters order by time limit 50;"
+    query = f"SELECT * FROM student.de10_ja_natural_disasters order by time desc limit 2;"
     disasters_data = query_db(query)
     #st.write(disasters_data)
 
@@ -179,6 +180,7 @@ with tab1:
         lat = disasters_data['latitude'],
         text = disasters_data['name'],
         mode = 'markers',
+        title="Natural Disasters on {max_disaster_date}"
         ))
     
     st.plotly_chart(disasters_fig)
