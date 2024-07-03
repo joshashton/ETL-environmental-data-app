@@ -12,7 +12,7 @@ import psycopg2 as psql
 import requests
 ## PPrint is 'Pretty Print' Which lets us print less offensive JSON
 from pprint import pprint
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 
 #get dates
@@ -100,26 +100,38 @@ with tab1:
         countries_df['country'],
         ['United Kingdom'], max_selections = 1)
     
+    today_date_datetime = datetime.strptime(today_date, '%Y-%m-%d')
+    date_20_years_ago = date(today_date_datetime.year - 0 , 6, 1)
+
     date_range = st.date_input(
-        "Select your vacation for next year",
-        (datetime.date(today_date.year-20, 12, 31), today_date),
-        min_weather_date.strftime('%Y-%m-%d'),
-        max_weather_date.strftime('%Y-%m-%d'),
+        "Select the years to analyse",
+        (date_20_years_ago, datetime.strptime(max_weather_date, '%Y-%m-%d')),
+        datetime.strptime(min_weather_date, '%Y-%m-%d'),
+        datetime.strptime(max_weather_date, '%Y-%m-%d'),
         format="YYYY/MM/DD",
     )    
 
     button_press = st.button("Analyse", type="primary")
     if button_press:
         #st.metric("Temperature", "26 C", "4 C from last year")
-        country_ids = countries_df.loc[countries_df.country == weather_options[0], 'country_id']
-        
-        #query = f"SELECT * FROM student.de10_ja_weather where country_id = {country_ids} = AND DATE(date) BETWEEN '{date_range[0]}' AND '{date_range[1]}';"
-        #weather_data = query_db(query)
-        #st.write(weather_data)
+        country_ids = countries_df.loc[countries_df.country == weather_options[0], 'country_id'].tolist()
+
+        query = f"SELECT * FROM student.de10_ja_weather where country_id = {country_ids[0]} AND DATE(date) BETWEEN '{date_range[0]}' AND '{date_range[1]}';"
+        weather_data = query_db(query)
+        st.write(weather_data)
 
         #weather plot
+        fig_temp = px.line(weather_data, x='date', y='avg_temp_c', title='Average Temperature Over Time')
+        fig_temp.update_layout(xaxis_title='Date', yaxis_title='Average Temperature (°C)')
+        st.plotly_chart(fig_temp)
 
+        fig_precipitation = px.bar(weather_data, x='date', y='precipitation_mm', title='Daily Precipitation Over Time')
+        fig_precipitation.update_layout(xaxis_title='Date', yaxis_title='Precipitation (mm)')
+        st.plotly_chart(fig_precipitation)
 
+        fig_wind = px.line(weather_data, x='date', y='avg_wind_speed_kmh', title='Average Wind Speed Over Time')
+        fig_wind.update_layout(xaxis_title='Date', yaxis_title='Average Wind Speed (km/h)')
+        st.plotly_chart(fig_wind)
 
 
     #earthquake plot 
