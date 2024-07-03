@@ -116,9 +116,18 @@ with tab1:
         #st.metric("Temperature", "26 C", "4 C from last year")
         country_ids = countries_df.loc[countries_df.country == weather_options[0], 'country_id'].tolist()
 
-        query = f"SELECT * FROM student.de10_ja_weather where country_id = {country_ids[0]} AND DATE(date) BETWEEN '{date_range[0]}' AND '{date_range[1]}';"
-        weather_data = query_db(query)
-        st.write(weather_data)
+        
+        all_weather_data = []  # List to hold all weather data
+
+        for country_id in country_ids:
+            query = f"""
+            SELECT * FROM student.de10_ja_weather 
+            WHERE country_id = {country_id} 
+            AND DATE(date) BETWEEN '{date_range[0]}' AND '{date_range[1]}';
+            """
+            weather_data = query_db(query)
+            all_weather_data.append(weather_data)
+        st.write(all_weather_data)
 
         #weather plot
         fig_temp = px.line(weather_data, x='date', y='avg_temp_c', title='Average Temperature Over Time')
