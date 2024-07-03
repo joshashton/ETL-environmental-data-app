@@ -47,6 +47,7 @@ def query_db(query):
 query = '''
     SELECT 
         (SELECT MAX(date) FROM student.de10_ja_weather) AS max_weather_date,
+        (SELECT MIN(date) FROM student.de10_ja_weather) AS min_weather_date,
         (SELECT MAX(time) FROM student.de10_ja_earthquake) AS max_earthquake_time,
         (SELECT MAX(time) FROM student.de10_ja_natural_disasters) AS max_natural_disasters_time,
         (SELECT MAX(date) FROM student.de10_ja_neo) AS max_neo_date,
@@ -57,6 +58,7 @@ dates = query_db(query)
 
 # Convert to datetime objects
 max_weather_date = datetime.strptime(dates['max_weather_date'][0], '%Y-%m-%d').strftime('%Y-%m-%d')
+min_weather_date = datetime.strptime(dates['min_weather_date'][0], '%Y-%m-%d').strftime('%Y-%m-%d')
 max_earthquake_date = datetime.strptime(dates['max_earthquake_time'][0][:10], '%Y-%m-%d').strftime('%Y-%m-%d')
 max_disaster_date = datetime.strptime(dates['max_natural_disasters_time'][0][:10], '%Y-%m-%d').strftime('%Y-%m-%d')
 max_neo_date = dates['max_neo_date'][0].strftime('%Y-%m-%d')
@@ -91,22 +93,33 @@ with tab1:
 
     # weather - this time last year
     # Analyse a Handfull of major cites 
-
     st.subheader("Historical Weather Analysis ")
 
     weather_options = st.multiselect(
         "Countries to analyse:", 
         countries_df['country'],
-        ['United Kingdom'])
-
-    if weather_options:
-        st.metric("Temperature", "26 C", "4 C from last year")
-
-    #weather plot
+        ['United Kingdom'], max_selections = 1)
     
-    query = f"SELECT * FROM student.de10_ja_weather where DATE(date) = '{max_weather_date}';"
-    weather_data = query_db(query)
-    st.write(weather_data)
+    date_range = st.date_input(
+        "Select your vacation for next year",
+        (datetime.date(today_date.year-20, 12, 31), today_date),
+        min_weather_date.strftime('%Y-%m-%d'),
+        max_weather_date.strftime('%Y-%m-%d'),
+        format="YYYY/MM/DD",
+    )    
+
+    button_press = st.button("Analyse", type="primary")
+    if button_press:
+        #st.metric("Temperature", "26 C", "4 C from last year")
+        country_ids = countries_df.loc[countries_df.country == weather_options[0], 'country_id']
+        
+        #query = f"SELECT * FROM student.de10_ja_weather where country_id = {country_ids} = AND DATE(date) BETWEEN '{date_range[0]}' AND '{date_range[1]}';"
+        #weather_data = query_db(query)
+        #st.write(weather_data)
+
+        #weather plot
+
+
 
 
     #earthquake plot 
