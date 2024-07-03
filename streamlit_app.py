@@ -36,12 +36,11 @@ def init_connection():
 
 conn = init_connection()
 
-@st.cache_data(ttl=get_ttl())
+@st.cache_data(ttl=get_ttl(), show_spinner = False)
 def query_db(query):
     #st.write("query_db")
     result = conn.query(query)
     return result
-
 
 
 # Get latest dates from DB for all data sources
