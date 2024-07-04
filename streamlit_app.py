@@ -153,10 +153,13 @@ with tab1:
         # Display a separate metric for each country
         for index, row in merged_weather_data.iterrows():
             country_name = row['country']
-            avg_temp = row['avg_precip']
+            avg_precip = row['avg_precip']
+            avg_precip_last_year = row['avg_precip_last_year']
+            precip_diff = avg_precip - avg_precip_last_year
+
             column = columns[index % 3]  # Cycle through columns
             with column:
-                st.metric(f"{country_name}", f"{avg_temp:.2f} mm")
+                st.metric(f"{country_name}", f"{avg_precip:.2f} mm", f"{precip_diff:.2f} mm from last year")
 
         st.caption(":blue[Current Monthly Average Wind Speed]")
         col1, col2, col3 = st.columns(3)
@@ -165,10 +168,13 @@ with tab1:
         # Display a separate metric for each country
         for index, row in merged_weather_data.iterrows():
             country_name = row['country']
-            avg_temp = row['avg_wind']
+            avg_wind = row['avg_wind']
+            avg_wind_last_year = row['avg_wind_last_year']
+            wind_diff = avg_wind - avg_wind_last_year
+
             column = columns[index % 3]  # Cycle through columns
             with column:
-                st.metric(f"{country_name}", f"{avg_temp:.2f} kmh")
+                st.metric(f"{country_name}", f"{avg_wind:.2f} kmh", f"{wind_diff:.2f} kmh from last year")
 
 
     today_date_datetime = datetime.strptime(today_date, '%Y-%m-%d')
