@@ -87,7 +87,6 @@ with tab1:
 
     #To-Do
     # weather - this time last year comparison stat
-    # weather - precipitation and wind stat - add to dataframe - find a way to get all countries in df
     # update countries csv in github
     # Make date picker responsive to countries ranges
     # Make it wide st.set_page_config(page_title="Ex-stream-ly Cool App",page_icon="🧊", layout="wide")
@@ -130,6 +129,9 @@ with tab1:
             with column:
                 st.metric(f"{country_name}", f"{avg_temp:.2f} °C")
 
+        col1, col2, col3 = st.columns(3)
+        columns = [col1, col2, col3]
+
         st.caption(":blue[Current Monthly Average Precipitation]")
         # Display a separate metric for each country
         for index, row in avg_monthly_temp.iterrows():
@@ -138,7 +140,10 @@ with tab1:
             column = columns[index % 3]  # Cycle through columns
             with column:
                 st.metric(f"{country_name}", f"{avg_temp:.2f} mm")
-        
+
+        col1, col2, col3 = st.columns(3)
+        columns = [col1, col2, col3]
+
         st.caption(":blue[Current Monthly Average Wind Speed]")
         # Display a separate metric for each country
         for index, row in avg_monthly_temp.iterrows():
@@ -310,8 +315,8 @@ with tab1:
 #Space section
 with tab2:
     st.header("Space Stats")
-    query = f"SELECT * FROM student.de10_ja_apod order by date desc limit 1;" 
-    #query = f"SELECT * FROM student.de10_ja_apod where DATE(date) = '{max_apod_date}';"
+    #query = f"SELECT * FROM student.de10_ja_apod order by date desc limit 1;" 
+    query = f"SELECT * FROM student.de10_ja_apod where DATE(date) = '{max_apod_date}';"
     apod_data = query_db(query)
     #st.write(apod_data)
     name, explanation, date, url = apod_data.iloc[0]
