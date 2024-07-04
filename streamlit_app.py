@@ -26,7 +26,6 @@ def get_ttl():
     next_day = now + timedelta(days=1)
     next_3am = next_day.replace(hour=3, minute=0, second=0, microsecond=0)
     ttl = next_3am - now
-    st.write(ttl)
     return ttl
 
 #DB connection
@@ -65,7 +64,7 @@ max_disaster_date = datetime.strptime(dates['max_natural_disasters_time'][0][:10
 max_neo_date = dates['max_neo_date'][0].strftime('%Y-%m-%d')
 max_apod_date = dates['max_apod_date'][0].strftime('%Y-%m-%d')
 
-
+# Get df of current month averages
 query = f"""SELECT country_id, AVG(avg_temp_c) as avg_temp, AVG(precipitation_mm) as avg_precip, AVG(avg_wind_speed_kmh) as avg_wind
             FROM student.de10_ja_weather 
             WHERE EXTRACT(MONTH FROM date::Date) = EXTRACT(MONTH FROM '{max_weather_date}'::Date) 
@@ -73,6 +72,13 @@ query = f"""SELECT country_id, AVG(avg_temp_c) as avg_temp, AVG(precipitation_mm
             GROUP BY country_id;"""
 monthly_weather_data = query_db(query)
 
+# Query for the same month from the previous year
+query_previous_year = f"""SELECT country_id, AVG(avg_temp_c) as avg_temp_last_year, AVG(precipitation_mm) as avg_precip_last_year, AVG(avg_wind_speed_kmh) as avg_wind_last_year
+            FROM student.de10_ja_weather 
+            WHERE EXTRACT(MONTH FROM date::Date) = EXTRACT(MONTH FROM '{max_weather_date}'::Date) 
+            AND EXTRACT(YEAR FROM date::Date) = EXTRACT(YEAR FROM '{max_weather_date}'::Date) - 1
+            GROUP BY country_id;"""
+previous_year_weather_data = query_db(query_previous_year)
 
 # Read the CSV file into a DataFrame
 countries_df = pd.read_csv('DataSetup/Data/capital_locations.csv')
@@ -99,7 +105,7 @@ with tab1:
     weather_options = st.multiselect(
         "Places to analyse (data from capital cities):", 
         countries_df['country'],
-        ['United Kingdom', 'Spain', 'Mexico'], max_selections = 5)
+        ['United Kingdom', 'Spain', 'Australia'], max_selections = 6)
     
     
     if weather_options:
@@ -115,38 +121,49 @@ with tab1:
         chosen_countries = monthly_weather_data['country_id'].isin(country_ids)
         avg_monthly_temp = monthly_weather_data[chosen_countries]
         avg_monthly_temp = avg_monthly_temp.merge(countries_df[['country_id', 'country']], on='country_id', how='left')
+       
+        previous_year_avg = pd.DataFrame()
+        
+        chosen_countries2 = previous_year_weather_data['country_id'].isin(country_ids)
+        previous_year_avg = previous_year_weather_data[chosen_countries2]
 
+        # Merge current and previous year data
+        merged_weather_data = avg_monthly_temp.merge(previous_year_avg, on='country_id', suffixes=('', '_last_year'))
+        st.write(merged_weather_data)
         st.caption(":blue[Current Monthly Average Temperature]")
         
         col1, col2, col3 = st.columns(3)
         columns = [col1, col2, col3]
 
         # Display a separate metric for each country
-        for index, row in avg_monthly_temp.iterrows():
+        for index, row in merged_weather_data.iterrows():
             country_name = row['country']
             avg_temp = row['avg_temp']
+            avg_temp_last_year = row['avg_temp_last_year']
+            temp_diff = avg_temp - avg_temp_last_year
+
             column = columns[index % 3]  # Cycle through columns
             with column:
-                st.metric(f"{country_name}", f"{avg_temp:.2f} °C")
+                st.metric(f"{country_name}", f"{avg_temp:.2f} °C", f"{temp_diff:.2f} °C from last year")
 
+        st.caption(":blue[Current Monthly Average Precipitation]")
         col1, col2, col3 = st.columns(3)
         columns = [col1, col2, col3]
 
-        st.caption(":blue[Current Monthly Average Precipitation]")
         # Display a separate metric for each country
-        for index, row in avg_monthly_temp.iterrows():
+        for index, row in merged_weather_data.iterrows():
             country_name = row['country']
             avg_temp = row['avg_precip']
             column = columns[index % 3]  # Cycle through columns
             with column:
                 st.metric(f"{country_name}", f"{avg_temp:.2f} mm")
 
+        st.caption(":blue[Current Monthly Average Wind Speed]")
         col1, col2, col3 = st.columns(3)
         columns = [col1, col2, col3]
 
-        st.caption(":blue[Current Monthly Average Wind Speed]")
         # Display a separate metric for each country
-        for index, row in avg_monthly_temp.iterrows():
+        for index, row in merged_weather_data.iterrows():
             country_name = row['country']
             avg_temp = row['avg_wind']
             column = columns[index % 3]  # Cycle through columns
