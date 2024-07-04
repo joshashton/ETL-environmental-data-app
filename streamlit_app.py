@@ -115,7 +115,8 @@ with tab1:
     
         chosen_countries = monthly_weather_data['country_id'].isin(country_ids)
         avg_monthly_temp = monthly_weather_data[chosen_countries]
-        
+        avg_monthly_temp = avg_monthly_temp.merge(countries_df[['country_id', 'country']], on='country_id', how='left')
+
         st.caption(":blue[Current Monthly Average Temperature]")
         
         col1, col2, col3 = st.columns(3)
@@ -124,10 +125,28 @@ with tab1:
         # Display a separate metric for each country
         for index, row in avg_monthly_temp.iterrows():
             country_name = row['country']
-            avg_temp = row['avg']
+            avg_temp = row['avg_temp']
             column = columns[index % 3]  # Cycle through columns
             with column:
                 st.metric(f"{country_name}", f"{avg_temp:.2f} °C")
+
+        st.caption(":blue[Current Monthly Average Precipitation]")
+        # Display a separate metric for each country
+        for index, row in avg_monthly_temp.iterrows():
+            country_name = row['country']
+            avg_temp = row['avg_precip']
+            column = columns[index % 3]  # Cycle through columns
+            with column:
+                st.metric(f"{country_name}", f"{avg_temp:.2f} mm")
+        
+        st.caption(":blue[Current Monthly Average Wind Speed]")
+        # Display a separate metric for each country
+        for index, row in avg_monthly_temp.iterrows():
+            country_name = row['country']
+            avg_temp = row['avg_wind']
+            column = columns[index % 3]  # Cycle through columns
+            with column:
+                st.metric(f"{country_name}", f"{avg_temp:.2f} kmh")
 
 
     today_date_datetime = datetime.strptime(today_date, '%Y-%m-%d')
