@@ -92,7 +92,6 @@ with tab1:
     st.header("Earth Stats")
 
     #To-Do
-    # weather - this time last year comparison stat
     # update countries csv in github
     # Make date picker responsive to countries ranges
     # Make it wide st.set_page_config(page_title="Ex-stream-ly Cool App",page_icon="🧊", layout="wide")
@@ -129,7 +128,6 @@ with tab1:
 
         # Merge current and previous year data
         merged_weather_data = avg_monthly_temp.merge(previous_year_avg, on='country_id', suffixes=('', '_last_year'))
-        st.write(merged_weather_data)
         st.caption(":blue[Current Monthly Average Temperature]")
         
         col1, col2, col3 = st.columns(3)
