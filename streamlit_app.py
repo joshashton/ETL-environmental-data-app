@@ -26,6 +26,7 @@ def get_ttl():
     next_day = now + timedelta(days=1)
     next_3am = next_day.replace(hour=3, minute=0, second=0, microsecond=0)
     ttl = next_3am - now
+    st.write(ttl)
     return ttl
 
 #DB connection
@@ -42,7 +43,7 @@ def query_db(query):
     result = conn.query(query)
     return result
 
-
+#inital setup queries
 # Get latest dates from DB for all data sources
 query = '''
     SELECT 
@@ -63,6 +64,15 @@ max_earthquake_date = datetime.strptime(dates['max_earthquake_time'][0][:10], '%
 max_disaster_date = datetime.strptime(dates['max_natural_disasters_time'][0][:10], '%Y-%m-%d').strftime('%Y-%m-%d')
 max_neo_date = dates['max_neo_date'][0].strftime('%Y-%m-%d')
 max_apod_date = dates['max_apod_date'][0].strftime('%Y-%m-%d')
+
+
+query = f"""SELECT country_id, AVG(avg_temp_c) as avg_temp, AVG(precipitation_mm) as avg_precip, AVG(avg_wind_speed_kmh) as avg_wind
+            FROM student.de10_ja_weather 
+            WHERE EXTRACT(MONTH FROM date::Date) = EXTRACT(MONTH FROM '{max_weather_date}'::Date) 
+            AND EXTRACT(YEAR FROM date::Date) = EXTRACT(YEAR FROM '{max_weather_date}'::Date)
+            GROUP BY country_id;"""
+monthly_weather_data = query_db(query)
+
 
 # Read the CSV file into a DataFrame
 countries_df = pd.read_csv('DataSetup/Data/capital_locations.csv')
@@ -102,17 +112,9 @@ with tab1:
             country_ids.extend(ids)
 
         avg_monthly_temp = pd.DataFrame()
-        for i in country_ids:
-            query = f"""SELECT country_id, AVG(avg_temp_c) 
-            FROM student.de10_ja_weather 
-            WHERE country_id = {i} 
-            AND EXTRACT(MONTH FROM date::Date) = EXTRACT(MONTH FROM '{today_date}'::Date) 
-            AND EXTRACT(YEAR FROM date::Date) = EXTRACT(YEAR FROM '{today_date}'::Date)
-            GROUP BY country_id;"""
-            weather_data = query_db(query)
-            avg_monthly_temp = pd.concat([weather_data,avg_monthly_temp], ignore_index=True)
-
-        avg_monthly_temp = avg_monthly_temp.merge(countries_df[['country_id', 'country']], on='country_id', how='left')
+    
+        chosen_countries = monthly_weather_data['country_id'].isin(country_ids)
+        avg_monthly_temp = monthly_weather_data[chosen_countries]
         
         st.caption(":blue[Current Monthly Average Temperature]")
         
