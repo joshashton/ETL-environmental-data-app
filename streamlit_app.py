@@ -42,6 +42,35 @@ def query_db(query):
     result = conn.query(query)
     return result
 
+# Function to aggregate data to monthly averages
+def aggregate_monthly(data):
+    st.write(data)
+    data['date'] = pd.to_datetime(data['date'])
+    monthly_data_list = []
+    for country_id, group in data.groupby('country_id'):
+        st.write(group)
+        # Set time column as index
+        monthly_group = group.set_index('date')
+        # Convert only specific columns to numeric, setting errors='coerce' to handle non-numeric data
+        monthly_group['avg_temp_c'] = pd.to_numeric(monthly_group['avg_temp_c'], errors='coerce')
+        monthly_group['precipitation_mm'] = pd.to_numeric(monthly_group['precipitation_mm'], errors='coerce')
+        monthly_group['avg_wind_speed_kmh'] = pd.to_numeric(monthly_group['avg_wind_speed_kmh'], errors='coerce')
+        
+        # Resample and calculate the mean for numeric columns
+        numeric_columns = ['avg_temp_c', 'precipitation_mm', 'avg_wind_speed_kmh']
+        monthly_group = monthly_group[numeric_columns].resample('M').mean()
+
+        # Add country_id and country columns back
+        monthly_group['country_id'] = country_id
+        monthly_group['country'] = group['country'].iloc[0]  # Add country name to the monthly data
+        monthly_group.reset_index(inplace=True)  # Reset index to include 'date' as a column
+        monthly_data_list.append(monthly_group)
+        st.write(monthly_data_list)
+
+  
+    monthly_data = pd.concat(monthly_data_list).reset_index()
+    return monthly_data
+
 #inital setup queries
 # Get latest dates from DB for all data sources
 query = '''
@@ -201,6 +230,21 @@ with tab1:
             all_weather_data = pd.concat([weather_data,all_weather_data], ignore_index=True)
 
         all_weather_data = all_weather_data.merge(countries_df[['country_id', 'country']], on='country_id', how='left')
+
+        # Check the length of the date range
+        start_date = pd.to_datetime(date_range[0])
+        end_date = pd.to_datetime(date_range[1])
+        date_diff = (end_date - start_date).days
+
+         # Aggregate to monthly if the date range is too large (e.g., more than 1 year)
+        if date_diff > 365:
+            all_weather_data = aggregate_monthly(all_weather_data)
+            x_axis = 'month'
+            date_label = 'Month'
+        else:
+            x_axis = 'date'
+            date_label = 'Date'
+
 
         #weather plots
         fig_temp = px.line(all_weather_data, x='date', y='avg_temp_c', title='Average Temperature Over Time', color='country')
