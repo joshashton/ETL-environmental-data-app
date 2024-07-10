@@ -24,8 +24,8 @@ def get_ttl():
     #make sure this is utc 
     now = datetime.now()
     next_day = now + timedelta(days=1)
-    next_3am = next_day.replace(hour=3, minute=0, second=0, microsecond=0)
-    ttl = next_3am - now
+    next_7am = next_day.replace(hour=7, minute=10, second=0, microsecond=0)
+    ttl = next_7am - now
     return ttl
 
 #DB connection
