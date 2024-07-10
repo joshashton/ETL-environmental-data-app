@@ -241,7 +241,6 @@ with tab1:
         else:
             date_label = 'Date'
 
-
         #weather plots
         fig_temp = px.line(all_weather_data, x='date', y='avg_temp_c', title='Average Temperature Over Time', color='country')
         fig_temp.update_layout(xaxis_title=date_label, yaxis_title='Average Temperature (°C)')
@@ -256,11 +255,10 @@ with tab1:
         st.plotly_chart(fig_wind)
 
 
-
     #earthquake plot 
     st.subheader(f"Earthquake Data")
     #query = f"SELECT * FROM student.de10_ja_earthquake where DATE(time) = '{max_earthquake_date}';"
-    query = f"SELECT * FROM student.de10_ja_earthquake order by time desc limit 10;"
+    query = f"SELECT * FROM student.de10_ja_earthquake order by time desc limit 50;"
     earthquake_data = query_db(query)
     #st.write(earthquake_data)
 
@@ -299,7 +297,7 @@ with tab1:
     
     minEarthquakeDate = earthquake_data['time'].min()[:10]
     earthquake_fig.update_layout(
-        title = f'Last 10 Earthquakes ({minEarthquakeDate} - {max_earthquake_date})',
+        title = f'Last 50 Earthquakes ({minEarthquakeDate} - {max_earthquake_date})',
         width=1000,  # Set the width of the figure
     )
     st.plotly_chart(earthquake_fig)
@@ -308,15 +306,15 @@ with tab1:
     #natural disaster plot
     st.subheader(f"Natural Disaster Data")
     #query = f"SELECT * FROM student.de10_ja_natural_disasters where DATE(time) = '{max_disaster_date}';"
-    query = f"SELECT * FROM student.de10_ja_natural_disasters order by time desc limit 10;"
+    query = f"SELECT * FROM student.de10_ja_natural_disasters order by time desc limit 50;"
     disasters_data = query_db(query)
    
     #map plot of daily quakes
     # Define custom colors for each disaster type
     disaster_colors = {
-        'Wildfires': 'yellow',
+        'Wildfires': 'red',
         'Severe Storms': 'green',
-        'Volcanoes': 'red',
+        'Volcanoes': 'yellow',
         'Sea and Lake Ice': 'blue'
     }
 
@@ -356,7 +354,7 @@ with tab1:
 
     minDisasterDtae = disasters_data['time'].min()[:10]
     disasters_fig.update_layout(
-        title = f'Last 10 Natural Disasters ({minDisasterDtae} - {max_disaster_date})',
+        title = f'Last 50 Natural Disasters ({minDisasterDtae} - {max_disaster_date})',
         #geo_scope='world',
         legend=dict(
         title="Disaster Types",
