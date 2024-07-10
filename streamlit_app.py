@@ -20,8 +20,8 @@ from datetime import datetime, timedelta, date
 today_date = datetime.today().strftime('%Y-%m-%d')
 
 def get_ttl():
-    # Calculate the ttl until 3 AM the next day for CRON job
-    #make sure this is utc 
+    # Calculate the ttl until 7 AM the next day for CRON job
+    # make sure this is utc 
     now = datetime.now()
     next_day = now + timedelta(days=1)
     next_7am = next_day.replace(hour=7, minute=10, second=0, microsecond=0)
@@ -44,11 +44,11 @@ def query_db(query):
 
 # Function to aggregate data to monthly averages
 def aggregate_monthly(data):
-    st.write(data)
+    
     data['date'] = pd.to_datetime(data['date'])
     monthly_data_list = []
     for country_id, group in data.groupby('country_id'):
-        st.write(group)
+       
         # Set time column as index
         monthly_group = group.set_index('date')
         # Convert only specific columns to numeric, setting errors='coerce' to handle non-numeric data
@@ -64,9 +64,7 @@ def aggregate_monthly(data):
         monthly_group['country_id'] = country_id
         monthly_group['country'] = group['country'].iloc[0]  # Add country name to the monthly data
         monthly_group.reset_index(inplace=True)  # Reset index to include 'date' as a column
-        monthly_data_list.append(monthly_group)
-        st.write(monthly_data_list)
-
+        monthly_data_list.append(monthly_group)       
   
     monthly_data = pd.concat(monthly_data_list).reset_index()
     return monthly_data
@@ -239,24 +237,22 @@ with tab1:
          # Aggregate to monthly if the date range is too large (e.g., more than 1 year)
         if date_diff > 365:
             all_weather_data = aggregate_monthly(all_weather_data)
-            x_axis = 'month'
             date_label = 'Month'
         else:
-            x_axis = 'date'
             date_label = 'Date'
 
 
         #weather plots
         fig_temp = px.line(all_weather_data, x='date', y='avg_temp_c', title='Average Temperature Over Time', color='country')
-        fig_temp.update_layout(xaxis_title='Date', yaxis_title='Average Temperature (°C)')
+        fig_temp.update_layout(xaxis_title=date_label, yaxis_title='Average Temperature (°C)')
         st.plotly_chart(fig_temp)
 
         fig_precipitation = px.bar(all_weather_data, x='date', y='precipitation_mm', title='Daily Precipitation Over Time', color='country')
-        fig_precipitation.update_layout(xaxis_title='Date', yaxis_title='Precipitation (mm)')
+        fig_precipitation.update_layout(xaxis_title=date_label, yaxis_title='Precipitation (mm)')
         st.plotly_chart(fig_precipitation)
 
         fig_wind = px.line(all_weather_data, x='date', y='avg_wind_speed_kmh', title='Average Wind Speed Over Time', color='country')
-        fig_wind.update_layout(xaxis_title='Date', yaxis_title='Average Wind Speed (km/h)')
+        fig_wind.update_layout(xaxis_title=date_label, yaxis_title='Average Wind Speed (km/h)')
         st.plotly_chart(fig_wind)
 
 
