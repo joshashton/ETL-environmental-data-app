@@ -1,75 +1,20 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt # visualisation!
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.figure_factory as ff
-
-#database connection
-import psycopg2 as psql 
-
-## Requests is the default library for asking python to talk to the web
-import requests
-## PPrint is 'Pretty Print' Which lets us print less offensive JSON
-from pprint import pprint
 from datetime import datetime, timedelta, date
-
+# my module
+import app_functions as appFunc
 
 #get dates
 today_date = datetime.today().strftime('%Y-%m-%d')
 
-def get_ttl():
-    # Calculate the ttl until 7 AM the next day for CRON job
-    # make sure this is utc 
-    now = datetime.now()
-    next_day = now + timedelta(days=1)
-    next_7am = next_day.replace(hour=7, minute=10, second=0, microsecond=0)
-    ttl = next_7am - now
-    return ttl
+# setup connection for all queries
+conn = appFunc.init_connection()
 
-#DB connection
-# Initialize connection.
-@st.cache_resource(ttl=get_ttl(), show_spinner = "Creating Connection...")
-def init_connection():
-    return st.connection("postgresql",type="sql")
-
-conn = init_connection()
-
-@st.cache_data(ttl=get_ttl(), show_spinner = False)
-def query_db(query):
-    #st.write("query_db")
-    result = conn.query(query)
-    return result
-
-# Function to aggregate data to monthly averages
-def aggregate_monthly(data):
-    
-    data['date'] = pd.to_datetime(data['date'])
-    monthly_data_list = []
-    for country_id, group in data.groupby('country_id'):
-       
-        # Set time column as index
-        monthly_group = group.set_index('date')
-        # Convert only specific columns to numeric, setting errors='coerce' to handle non-numeric data
-        monthly_group['avg_temp_c'] = pd.to_numeric(monthly_group['avg_temp_c'], errors='coerce')
-        monthly_group['precipitation_mm'] = pd.to_numeric(monthly_group['precipitation_mm'], errors='coerce')
-        monthly_group['avg_wind_speed_kmh'] = pd.to_numeric(monthly_group['avg_wind_speed_kmh'], errors='coerce')
-        
-        # Resample and calculate the mean for numeric columns
-        numeric_columns = ['avg_temp_c', 'precipitation_mm', 'avg_wind_speed_kmh']
-        monthly_group = monthly_group[numeric_columns].resample('M').mean()
-
-        # Add country_id and country columns back
-        monthly_group['country_id'] = country_id
-        monthly_group['country'] = group['country'].iloc[0]  # Add country name to the monthly data
-        monthly_group.reset_index(inplace=True)  # Reset index to include 'date' as a column
-        monthly_data_list.append(monthly_group)       
-  
-    monthly_data = pd.concat(monthly_data_list).reset_index()
-    return monthly_data
-
-#inital setup queries
+# inital setup queries
 # Get latest dates from DB for all data sources
 query = '''
     SELECT 
@@ -81,7 +26,7 @@ query = '''
         (SELECT MAX(date) FROM student.de10_ja_apod) AS max_apod_date
 '''
 
-dates = query_db(query)
+dates = appFunc.query_db(query, conn)
 
 # Convert to datetime objects
 max_weather_date = datetime.strptime(dates['max_weather_date'][0], '%Y-%m-%d').strftime('%Y-%m-%d')
@@ -97,7 +42,7 @@ query = f"""SELECT country_id, AVG(avg_temp_c) as avg_temp, AVG(precipitation_mm
             WHERE EXTRACT(MONTH FROM date::Date) = EXTRACT(MONTH FROM '{max_weather_date}'::Date) 
             AND EXTRACT(YEAR FROM date::Date) = EXTRACT(YEAR FROM '{max_weather_date}'::Date)
             GROUP BY country_id;"""
-monthly_weather_data = query_db(query)
+monthly_weather_data = appFunc.query_db(query, conn)
 
 # Query for the same month from the previous year
 query_previous_year = f"""SELECT country_id, AVG(avg_temp_c) as avg_temp_last_year, AVG(precipitation_mm) as avg_precip_last_year, AVG(avg_wind_speed_kmh) as avg_wind_last_year
@@ -105,7 +50,7 @@ query_previous_year = f"""SELECT country_id, AVG(avg_temp_c) as avg_temp_last_ye
             WHERE EXTRACT(MONTH FROM date::Date) = EXTRACT(MONTH FROM '{max_weather_date}'::Date) 
             AND EXTRACT(YEAR FROM date::Date) = EXTRACT(YEAR FROM '{max_weather_date}'::Date) - 1
             GROUP BY country_id;"""
-previous_year_weather_data = query_db(query_previous_year)
+previous_year_weather_data = appFunc.query_db(query_previous_year, conn)
 
 # Read the CSV file into a DataFrame
 countries_df = pd.read_csv('DataSetup/Data/capital_locations.csv')
@@ -113,6 +58,7 @@ countries_df = pd.read_csv('DataSetup/Data/capital_locations.csv')
 st.title("Environmental Information Hub")
 
 tab1, tab2 = st.tabs(["🌍 Earth", "🚀 Space"])
+
 
 #Earth section
 with tab1:
@@ -224,7 +170,7 @@ with tab1:
         #get sql data for selected countries
         for country_id in country_ids:
             query = f"""SELECT * FROM student.de10_ja_weather WHERE country_id = {country_id} AND DATE(date) BETWEEN '{date_range[0]}' AND '{date_range[1]}' ORDER BY date ASC;"""
-            weather_data = query_db(query)
+            weather_data = appFunc.query_db(query, conn)
             all_weather_data = pd.concat([weather_data,all_weather_data], ignore_index=True)
 
         all_weather_data = all_weather_data.merge(countries_df[['country_id', 'country']], on='country_id', how='left')
@@ -236,7 +182,7 @@ with tab1:
 
          # Aggregate to monthly if the date range is too large (e.g., more than 1 year)
         if date_diff > 365:
-            all_weather_data = aggregate_monthly(all_weather_data)
+            all_weather_data = appFunc.aggregate_monthly(all_weather_data)
             date_label = 'Month'
         else:
             date_label = 'Date'
@@ -259,7 +205,7 @@ with tab1:
     st.subheader(f"Earthquake Data")
     #query = f"SELECT * FROM student.de10_ja_earthquake where DATE(time) = '{max_earthquake_date}';"
     query = f"SELECT * FROM student.de10_ja_earthquake order by time desc limit 50;"
-    earthquake_data = query_db(query)
+    earthquake_data = appFunc.query_db(query, conn)
     #st.write(earthquake_data)
 
     #map plot of daily quakes
@@ -307,7 +253,7 @@ with tab1:
     st.subheader(f"Natural Disaster Data")
     #query = f"SELECT * FROM student.de10_ja_natural_disasters where DATE(time) = '{max_disaster_date}';"
     query = f"SELECT * FROM student.de10_ja_natural_disasters order by time desc limit 50;"
-    disasters_data = query_db(query)
+    disasters_data = appFunc.query_db(query, conn)
    
     #map plot of daily quakes
     # Define custom colors for each disaster type
@@ -369,14 +315,12 @@ with tab1:
     
 
 
-
-
 #Space section
 with tab2:
     st.header("Space Stats")
     #query = f"SELECT * FROM student.de10_ja_apod order by date desc limit 1;" 
     query = f"SELECT * FROM student.de10_ja_apod where DATE(date) = '{max_apod_date}';"
-    apod_data = query_db(query)
+    apod_data = appFunc.query_db(query, conn)
     #st.write(apod_data)
     name, explanation, date, url = apod_data.iloc[0]
     st.subheader(f"Astronomy Picture of the Day (APOD)")
@@ -385,7 +329,7 @@ with tab2:
 
     st.subheader(f"Near Earth Objects (NEO)")
     query = f"SELECT * FROM student.de10_ja_neo where DATE(date) = '{max_neo_date}';"
-    neo_data = query_db(query)
+    neo_data = appFunc.query_db(query, conn)
     #st.write(neo_data)
 
 
