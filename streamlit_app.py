@@ -337,7 +337,7 @@ with tab2:
     # Define a function to adjust astroid size based on diameter
     def adjust_marker_size(diameter):
         if diameter > 0.099:
-            return diameter * 40  
+            return diameter * 20 
         else:
             return diameter * 200  
     # Earth position
