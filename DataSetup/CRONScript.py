@@ -323,5 +323,65 @@ if neo_response:
             row[5],
             ))
 
+carbon_url = f'https://api.carbonintensity.org.uk/regional'
+carbon_response = get_API_JSON(carbon_url)
+#collect data
+if carbon_response:
+    carbon_list = []
+    
+    for region in carbon_response['data'][0]['regions']:
+        
+        data = {
+            'from': carbon_response['data'][0]['from'],
+            'to': carbon_response['data'][0]['to'],
+            
+            'regionid': region['regionid'],
+            'dnoregion': region['dnoregion'],
+            'shortname': region['shortname'],
+            'forecast': region['intensity']['forecast'],
+            'index': region['intensity']['index'],
+            
+            'biomass': region['generationmix'][0]['perc'],
+            'coal': region['generationmix'][1]['perc'],
+            'imports': region['generationmix'][2]['perc'],
+            'gas': region['generationmix'][3]['perc'],
+            'nuclear': region['generationmix'][4]['perc'],
+            'other': region['generationmix'][5]['perc'],
+            'hydro': region['generationmix'][6]['perc'],
+            'solar': region['generationmix'][7]['perc'],
+            'wind': region['generationmix'][8]['perc']
+           # 'index': region['intensity']['index']
+        }
+        carbon_list.append(data)
+
+    carbon_data = pd.DataFrame(carbon_list)
+    
+    for _, row in carbon_data.iterrows():
+    
+        sql = """
+            INSERT INTO student.de10_ja_carbon("from", "to", regionid, dnoregion, shortname, forecast,"index",biomass,coal,imports,gas,nuclear,other,hydro,solar,wind)
+            VALUES (%s, %s, %s, %s,%s, %s, %s, %s,%s, %s, %s, %s,%s, %s, %s, %s)
+            """
+        # Execute the SQL command
+        cur.execute(sql, (
+            row[0],
+            row[1],
+            row[2],
+            row[3],
+            row[4],
+            row[5],
+            row[6],
+            row[7],
+            row[8],
+            row[9],
+            row[10],
+            row[11],
+            row[12],
+            row[13],
+            row[14],
+            row[15],
+            ))
+
+
 conn.commit()
 conn.close()
