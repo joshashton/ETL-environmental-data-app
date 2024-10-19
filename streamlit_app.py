@@ -200,6 +200,38 @@ with tab1:
         fig_wind.update_layout(xaxis_title=date_label, yaxis_title='Average Wind Speed (km/h)')
         st.plotly_chart(fig_wind)
 
+    st.subheader(f"UK Carbon Data")
+    query = '''
+    SELECT forecast, "index", shortname, regionid,"from"
+    FROM student.de10_ja_carbon
+    WHERE DATE("from") = (SELECT MAX(DATE("from")) FROM student.de10_ja_carbon)
+    ORDER BY forecast ASC;
+    '''
+    earthquake_data = appFunc.query_db(query, conn)
+
+    # Define column names
+    columns = ["forecast", "index", "shortname", "regionid"]
+
+    # Convert to DataFrame
+    df = pd.DataFrame(earthquake_data, columns=columns)
+
+    # Define a function to color-code forecast levels
+    def highlight_forecast(val):
+        if val < 50:      # Low level (you can adjust the threshold)
+            color = 'lightgreen'
+        elif 50 <= val < 100:  # Moderate level
+            color = 'yellow'
+        else:             # High level
+            color = 'salmon'
+        return f'background-color: {color}'
+
+    # Apply color-coding to the forecast column
+    df_styled = df.style.applymap(highlight_forecast, subset=['forecast'])
+    today_date = datetime.today().strftime('%Y-%m-%d')
+    # Display the styled DataFrame in Streamlit
+    st.subheader(f"UK Carbon Data ({today_date})")
+    st.dataframe(df_styled)
+    #st.write(earthquake_data)
 
     #earthquake plot 
     st.subheader(f"Earthquake Data")
