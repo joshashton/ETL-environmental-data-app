@@ -28,29 +28,27 @@ query = '''
 
 dates = appFunc.query_db(query, conn)
 
-# Convert to datetime objects
-max_weather_date = datetime.strptime(dates['max_weather_date'][0], '%Y-%m-%d').strftime('%Y-%m-%d')
-min_weather_date = datetime.strptime(dates['min_weather_date'][0], '%Y-%m-%d').strftime('%Y-%m-%d')
-max_earthquake_date = datetime.strptime(dates['max_earthquake_time'][0][:10], '%Y-%m-%d').strftime('%Y-%m-%d')
-max_disaster_date = datetime.strptime(dates['max_natural_disasters_time'][0][:10], '%Y-%m-%d').strftime('%Y-%m-%d')
+# Convert to formatted date strings
+max_weather_date = dates['max_weather_date'][0].strftime('%Y-%m-%d')
+min_weather_date = dates['min_weather_date'][0].strftime('%Y-%m-%d')
+max_earthquake_date = dates['max_earthquake_time'][0].strftime('%Y-%m-%d')
+max_disaster_date = dates['max_natural_disasters_time'][0].strftime('%Y-%m-%d')
 max_neo_date = dates['max_neo_date'][0].strftime('%Y-%m-%d')
 max_apod_date = dates['max_apod_date'][0].strftime('%Y-%m-%d')
 
-# Get df of current month averages
-query = f"""SELECT country_id, AVG(avg_temp_c) as avg_temp, AVG(precipitation_mm) as avg_precip, AVG(avg_wind_speed_kmh) as avg_wind
-            FROM student.de10_ja_weather 
-            WHERE EXTRACT(MONTH FROM date::Date) = EXTRACT(MONTH FROM '{max_weather_date}'::Date) 
-            AND EXTRACT(YEAR FROM date::Date) = EXTRACT(YEAR FROM '{max_weather_date}'::Date)
-            GROUP BY country_id;"""
-monthly_weather_data = appFunc.query_db(query, conn)
+# get daily temperature / avg_precip / avg_wind  cards for each country
 
-# Query for the same month from the previous year
-query_previous_year = f"""SELECT country_id, AVG(avg_temp_c) as avg_temp_last_year, AVG(precipitation_mm) as avg_precip_last_year, AVG(avg_wind_speed_kmh) as avg_wind_last_year
-            FROM student.de10_ja_weather 
-            WHERE EXTRACT(MONTH FROM date::Date) = EXTRACT(MONTH FROM '{max_weather_date}'::Date) 
-            AND EXTRACT(YEAR FROM date::Date) = EXTRACT(YEAR FROM '{max_weather_date}'::Date) - 1
-            GROUP BY country_id;"""
-previous_year_weather_data = appFunc.query_db(query_previous_year, conn)
+# Define the query to fetch average weather data for each country for the latest date
+query = f"""
+    SELECT country_id, 
+    AVG(avg_temp_c) AS avg_temp, 
+    AVG(precipitation_mm) AS avg_precip, 
+    AVG(avg_wind_speed_kmh) AS avg_wind 
+    FROM student.de10_ja_weather
+    WHERE date = '{max_weather_date}'
+    GROUP BY country_id;
+    """
+monthly_weather_data = appFunc.query_db(query, conn)
 
 # Read the CSV file into a DataFrame
 countries_df = pd.read_csv('DataSetup/Data/capital_locations.csv')
@@ -79,128 +77,59 @@ with tab1:
         countries_df['country'],
         ['United Kingdom', 'Spain', 'Australia'], max_selections = 6)
     
-    
     if weather_options:
-        #get chosen countries ids and names in df
+        # Get chosen countries' IDs
         country_ids = []
         for weather_option in weather_options:
             # Find corresponding country_id for the selected weather_option
             ids = countries_df.loc[countries_df['country'] == weather_option, 'country_id'].tolist()
             country_ids.extend(ids)
 
-        avg_monthly_temp = pd.DataFrame()
-    
-        chosen_countries = monthly_weather_data['country_id'].isin(country_ids)
-        avg_monthly_temp = monthly_weather_data[chosen_countries]
+        # Filter the monthly_weather_data for the selected countries
+        avg_monthly_temp = monthly_weather_data[monthly_weather_data['country_id'].isin(country_ids)]
         avg_monthly_temp = avg_monthly_temp.merge(countries_df[['country_id', 'country']], on='country_id', how='left')
-       
-        previous_year_avg = pd.DataFrame()
-        
-        chosen_countries2 = previous_year_weather_data['country_id'].isin(country_ids)
-        previous_year_avg = previous_year_weather_data[chosen_countries2]
 
-        # Merge current and previous year data
-        merged_weather_data = avg_monthly_temp.merge(previous_year_avg, on='country_id', suffixes=('', '_last_year'))
+        # Display current monthly average temperature
         st.caption(":blue[Current Monthly Average Temperature]")
-        
         col1, col2, col3 = st.columns(3)
         columns = [col1, col2, col3]
 
-        # Display a separate metric for each country
-        for index, row in merged_weather_data.iterrows():
+        for index, row in avg_monthly_temp.iterrows():
             country_name = row['country']
             avg_temp = row['avg_temp']
-            avg_temp_last_year = row['avg_temp_last_year']
-            temp_diff = avg_temp - avg_temp_last_year
 
             column = columns[index % 3]  # Cycle through columns
             with column:
-                st.metric(f"{country_name}", f"{avg_temp:.2f} °C", f"{temp_diff:.2f} °C from last year")
+                st.metric(f"{country_name}", f"{avg_temp:.2f} °C")
 
+        # Display current monthly average precipitation
         st.caption(":blue[Current Monthly Average Precipitation]")
         col1, col2, col3 = st.columns(3)
         columns = [col1, col2, col3]
 
-        # Display a separate metric for each country
-        for index, row in merged_weather_data.iterrows():
+        for index, row in avg_monthly_temp.iterrows():
             country_name = row['country']
             avg_precip = row['avg_precip']
-            avg_precip_last_year = row['avg_precip_last_year']
-            precip_diff = avg_precip - avg_precip_last_year
-
             column = columns[index % 3]  # Cycle through columns
             with column:
-                st.metric(f"{country_name}", f"{avg_precip:.2f} mm", f"{precip_diff:.2f} mm from last year")
+                st.metric(f"{country_name}", f"{avg_precip:.2f} mm")
 
+        # Display current monthly average wind speed
         st.caption(":blue[Current Monthly Average Wind Speed]")
         col1, col2, col3 = st.columns(3)
         columns = [col1, col2, col3]
 
-        # Display a separate metric for each country
-        for index, row in merged_weather_data.iterrows():
+        for index, row in avg_monthly_temp.iterrows():
             country_name = row['country']
             avg_wind = row['avg_wind']
-            avg_wind_last_year = row['avg_wind_last_year']
-            wind_diff = avg_wind - avg_wind_last_year
 
             column = columns[index % 3]  # Cycle through columns
             with column:
-                st.metric(f"{country_name}", f"{avg_wind:.2f} kmh", f"{wind_diff:.2f} kmh from last year")
+                st.metric(f"{country_name}", f"{avg_wind:.2f} km/h")
+        today_date_datetime = datetime.strptime(today_date, '%Y-%m-%d')
+        date_20_years_ago = date(today_date_datetime.year - 0 , 1, 1)
 
-
-    today_date_datetime = datetime.strptime(today_date, '%Y-%m-%d')
-    date_20_years_ago = date(today_date_datetime.year - 0 , 1, 1)
-
-    date_range = st.date_input(
-        "Select date range to analyse",
-        (date_20_years_ago, datetime.strptime(max_weather_date, '%Y-%m-%d')),
-        datetime.strptime(min_weather_date, '%Y-%m-%d'),
-        datetime.strptime(max_weather_date, '%Y-%m-%d'),
-        format="YYYY/MM/DD",
-    )    
-
-    button_press = st.button("Analyse", type="primary")
-    if button_press:
-        #st.metric("Temperature", "26 C", "4 C from last year")
-        # Loop through each weather option selected
-        
-        
-        all_weather_data = pd.DataFrame() 
-
-        #get sql data for selected countries
-        for country_id in country_ids:
-            query = f"""SELECT * FROM student.de10_ja_weather WHERE country_id = {country_id} AND DATE(date) BETWEEN '{date_range[0]}' AND '{date_range[1]}' ORDER BY date ASC;"""
-            weather_data = appFunc.query_db(query, conn)
-            all_weather_data = pd.concat([weather_data,all_weather_data], ignore_index=True)
-
-        all_weather_data = all_weather_data.merge(countries_df[['country_id', 'country']], on='country_id', how='left')
-
-        # Check the length of the date range
-        start_date = pd.to_datetime(date_range[0])
-        end_date = pd.to_datetime(date_range[1])
-        date_diff = (end_date - start_date).days
-
-         # Aggregate to monthly if the date range is too large (e.g., more than 1 year)
-        if date_diff > 365:
-            all_weather_data = appFunc.aggregate_monthly(all_weather_data)
-            date_label = 'Month'
-        else:
-            date_label = 'Date'
-
-        #weather plots
-        fig_temp = px.line(all_weather_data, x='date', y='avg_temp_c', title='Average Temperature Over Time', color='country')
-        fig_temp.update_layout(xaxis_title=date_label, yaxis_title='Average Temperature (°C)')
-        st.plotly_chart(fig_temp)
-
-        fig_precipitation = px.bar(all_weather_data, x='date', y='precipitation_mm', title='Daily Precipitation Over Time', color='country')
-        fig_precipitation.update_layout(xaxis_title=date_label, yaxis_title='Precipitation (mm)')
-        st.plotly_chart(fig_precipitation)
-
-        fig_wind = px.line(all_weather_data, x='date', y='avg_wind_speed_kmh', title='Average Wind Speed Over Time', color='country')
-        fig_wind.update_layout(xaxis_title=date_label, yaxis_title='Average Wind Speed (km/h)')
-        st.plotly_chart(fig_wind)
-
-    st.subheader(f"UK Carbon Data")
+    
     query = '''
     SELECT forecast, "index", shortname, regionid,"from"
     FROM student.de10_ja_carbon
@@ -273,11 +202,14 @@ with tab1:
         customdata=earthquake_data[['time', 'mag', 'magtype']]
         ))
     
-    minEarthquakeDate = earthquake_data['time'].min()[:10]
+    minEarthquakeDate = earthquake_data['time'].min().strftime('%Y-%m-%d')
+    max_earthquake_date = earthquake_data['time'].max().strftime('%Y-%m-%d')
+
     earthquake_fig.update_layout(
         title = f'Last 50 Earthquakes ({minEarthquakeDate} - {max_earthquake_date})',
         width=1000,  # Set the width of the figure
     )
+
     st.plotly_chart(earthquake_fig)
 
 
@@ -330,17 +262,18 @@ with tab1:
             
         ))
 
-    minDisasterDtae = disasters_data['time'].min()[:10]
+    minDisasterDate = disasters_data['time'].min().strftime('%Y-%m-%d')
+    max_disaster_date = disasters_data['time'].max().strftime('%Y-%m-%d')
+
     disasters_fig.update_layout(
-        title = f'Last 50 Natural Disasters ({minDisasterDtae} - {max_disaster_date})',
-        #geo_scope='world',
+        title = f'Last 50 Natural Disasters ({minDisasterDate} - {max_disaster_date})',
+        # geo_scope='world',
         legend=dict(
-        title="Disaster Types",
-        itemsizing='constant',
-        traceorder='normal',
+            title="Disaster Types",
+            itemsizing='constant',
+            traceorder='normal',
         ),
         width=1000,  # Set the width of the figure
-        
     )
 
     st.plotly_chart(disasters_fig)
